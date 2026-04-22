@@ -18,7 +18,11 @@ export default defineConfig(({ mode }) => {
   // TODO: Remove support for legacy PORT variables in all locations in a future major release, leaving only SERVER_PORT.
   const serverPort = env.SERVER_PORT || env.PORT || 3001
 
+  const rawBasePath = env.BASE_PATH || ''
+  const basePath = rawBasePath ? `/${rawBasePath.replace(/^\/|\/$/g, '')}/` : '/'
+
   return {
+    base: basePath,
     plugins: [react()],
     resolve: {
       alias: {
@@ -29,12 +33,12 @@ export default defineConfig(({ mode }) => {
       host,
       port: parseInt(env.VITE_PORT) || 5173,
       proxy: {
-        '/api': `http://${proxyHost}:${serverPort}`,
-        '/ws': {
+        [`${basePath}api`]: `http://${proxyHost}:${serverPort}`,
+        [`${basePath}ws`]: {
           target: `ws://${proxyHost}:${serverPort}`,
           ws: true
         },
-        '/shell': {
+        [`${basePath}shell`]: {
           target: `ws://${proxyHost}:${serverPort}`,
           ws: true
         }

@@ -1,7 +1,10 @@
 import { IS_PLATFORM } from "../constants/config";
 
+const API_BASE = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
+
 // Utility function for authenticated API calls
 export const authenticatedFetch = (url, options = {}) => {
+  const resolvedUrl = url.startsWith('/') ? `${API_BASE}${url}` : url;
   const token = localStorage.getItem('auth-token');
 
   const defaultHeaders = {};
@@ -15,7 +18,7 @@ export const authenticatedFetch = (url, options = {}) => {
     defaultHeaders['Authorization'] = `Bearer ${token}`;
   }
 
-  return fetch(url, {
+  return fetch(resolvedUrl, {
     ...options,
     headers: {
       ...defaultHeaders,
@@ -34,13 +37,13 @@ export const authenticatedFetch = (url, options = {}) => {
 export const api = {
   // Auth endpoints (no token required)
   auth: {
-    status: () => fetch('/api/auth/status'),
-    login: (username, password) => fetch('/api/auth/login', {
+    status: () => fetch(`${API_BASE}/api/auth/status`),
+    login: (username, password) => fetch(`${API_BASE}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
     }),
-    register: (username, password) => fetch('/api/auth/register', {
+    register: (username, password) => fetch(`${API_BASE}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
@@ -102,7 +105,7 @@ export const api = {
     const token = localStorage.getItem('auth-token');
     const params = new URLSearchParams({ q: query, limit: String(limit) });
     if (token) params.set('token', token);
-    return `/api/search/conversations?${params.toString()}`;
+    return `${API_BASE}/api/search/conversations?${params.toString()}`;
   },
   createWorkspace: (workspaceData) =>
     authenticatedFetch('/api/projects/create-workspace', {

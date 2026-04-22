@@ -58,6 +58,11 @@ import { getConnectableHost } from '../shared/networkHosts.js';
 
 const VALID_PROVIDERS = ['claude', 'codex', 'cursor', 'gemini'];
 
+// Base path for subdirectory deployment (e.g., BASE_PATH=/code → basePath="/code")
+const _rawBasePath = (process.env.BASE_PATH || '').replace(/^\/|\/$/g, '');
+const basePath = _rawBasePath ? `/${_rawBasePath}` : '';
+const bp = (p) => `${basePath}${p}`;
+
 // File system watchers for provider project/session folders
 const PROVIDER_WATCH_PATHS = [
     { provider: 'claude', rootPath: path.join(os.homedir(), '.claude', 'projects') },
@@ -266,7 +271,7 @@ app.use(express.json({
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Public health check endpoint (no authentication required)
-app.get('/health', (req, res) => {
+app.get(bp('/health'), (req, res) => {
     res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
@@ -275,59 +280,59 @@ app.get('/health', (req, res) => {
 });
 
 // Optional API key validation (if configured)
-app.use('/api', validateApiKey);
+app.use(bp('/api'), validateApiKey);
 
 // Authentication routes (public)
-app.use('/api/auth', authRoutes);
+app.use(bp('/api/auth'), authRoutes);
 
 // Projects API Routes (protected)
-app.use('/api/projects', authenticateToken, projectsRoutes);
+app.use(bp('/api/projects'), authenticateToken, projectsRoutes);
 
 // Git API Routes (protected)
-app.use('/api/git', authenticateToken, gitRoutes);
+app.use(bp('/api/git'), authenticateToken, gitRoutes);
 
 // Cursor API Routes (protected)
-app.use('/api/cursor', authenticateToken, cursorRoutes);
+app.use(bp('/api/cursor'), authenticateToken, cursorRoutes);
 
 // TaskMaster API Routes (protected)
-app.use('/api/taskmaster', authenticateToken, taskmasterRoutes);
+app.use(bp('/api/taskmaster'), authenticateToken, taskmasterRoutes);
 
 // MCP utilities
-app.use('/api/mcp-utils', authenticateToken, mcpUtilsRoutes);
+app.use(bp('/api/mcp-utils'), authenticateToken, mcpUtilsRoutes);
 
 // Commands API Routes (protected)
-app.use('/api/commands', authenticateToken, commandsRoutes);
+app.use(bp('/api/commands'), authenticateToken, commandsRoutes);
 
 // Settings API Routes (protected)
-app.use('/api/settings', authenticateToken, settingsRoutes);
+app.use(bp('/api/settings'), authenticateToken, settingsRoutes);
 
 // User API Routes (protected)
-app.use('/api/user', authenticateToken, userRoutes);
+app.use(bp('/api/user'), authenticateToken, userRoutes);
 
 // Codex API Routes (protected)
-app.use('/api/codex', authenticateToken, codexRoutes);
+app.use(bp('/api/codex'), authenticateToken, codexRoutes);
 
 // Gemini API Routes (protected)
-app.use('/api/gemini', authenticateToken, geminiRoutes);
+app.use(bp('/api/gemini'), authenticateToken, geminiRoutes);
 
 // Plugins API Routes (protected)
-app.use('/api/plugins', authenticateToken, pluginsRoutes);
+app.use(bp('/api/plugins'), authenticateToken, pluginsRoutes);
 
 // Unified session messages route (protected)
-app.use('/api/sessions', authenticateToken, messagesRoutes);
+app.use(bp('/api/sessions'), authenticateToken, messagesRoutes);
 
 // Unified provider MCP routes (protected)
-app.use('/api/providers', authenticateToken, providerRoutes);
+app.use(bp('/api/providers'), authenticateToken, providerRoutes);
 
 // Agent API Routes (uses API key authentication)
-app.use('/api/agent', agentRoutes);
+app.use(bp('/api/agent'), agentRoutes);
 
 // Serve public files (like api-docs.html)
-app.use(express.static(path.join(APP_ROOT, 'public')));
+app.use(bp('/'), express.static(path.join(APP_ROOT, 'public')));
 
 // Static files served after API routes
 // Add cache control: HTML files should not be cached, but assets can be cached
-app.use(express.static(path.join(APP_ROOT, 'dist'), {
+app.use(bp('/'), express.static(path.join(APP_ROOT, 'dist'), {
     setHeaders: (res, filePath) => {
         if (filePath.endsWith('.html')) {
             // Prevent HTML caching to avoid service worker issues after builds
@@ -346,7 +351,7 @@ app.use(express.static(path.join(APP_ROOT, 'dist'), {
 // Frontend now uses window.location for WebSocket URLs
 
 // System update endpoint
-app.post('/api/system/update', authenticateToken, async (req, res) => {
+app.post(bp('/api/system/update'), authenticateToken, async (req, res) => {
     try {
         // Get the project root directory (parent of server directory)
         const projectRoot = APP_ROOT;
@@ -419,7 +424,7 @@ app.post('/api/system/update', authenticateToken, async (req, res) => {
     }
 });
 
-app.get('/api/projects', authenticateToken, async (req, res) => {
+app.get(bp('/api/projects'), authenticateToken, async (req, res) => {
     try {
         const projects = await getProjects(broadcastProgress);
         res.json(projects);
@@ -428,7 +433,7 @@ app.get('/api/projects', authenticateToken, async (req, res) => {
     }
 });
 
-app.get('/api/projects/:projectName/sessions', authenticateToken, async (req, res) => {
+app.get(bp('/api/projects/:projectName/sessions'), authenticateToken, async (req, res) => {
     try {
         const { limit = 5, offset = 0 } = req.query;
         const result = await getSessions(req.params.projectName, parseInt(limit), parseInt(offset));
@@ -440,7 +445,7 @@ app.get('/api/projects/:projectName/sessions', authenticateToken, async (req, re
 });
 
 // Rename project endpoint
-app.put('/api/projects/:projectName/rename', authenticateToken, async (req, res) => {
+app.put(bp('/api/projects/:projectName/rename'), authenticateToken, async (req, res) => {
     try {
         const { displayName } = req.body;
         await renameProject(req.params.projectName, displayName);
@@ -451,7 +456,7 @@ app.put('/api/projects/:projectName/rename', authenticateToken, async (req, res)
 });
 
 // Delete session endpoint
-app.delete('/api/projects/:projectName/sessions/:sessionId', authenticateToken, async (req, res) => {
+app.delete(bp('/api/projects/:projectName/sessions/:sessionId'), authenticateToken, async (req, res) => {
     try {
         const { projectName, sessionId } = req.params;
         console.log(`[API] Deleting session: ${sessionId} from project: ${projectName}`);
@@ -466,7 +471,7 @@ app.delete('/api/projects/:projectName/sessions/:sessionId', authenticateToken, 
 });
 
 // Rename session endpoint
-app.put('/api/sessions/:sessionId/rename', authenticateToken, async (req, res) => {
+app.put(bp('/api/sessions/:sessionId/rename'), authenticateToken, async (req, res) => {
     try {
         const { sessionId } = req.params;
         const safeSessionId = String(sessionId).replace(/[^a-zA-Z0-9._-]/g, '');
@@ -494,7 +499,7 @@ app.put('/api/sessions/:sessionId/rename', authenticateToken, async (req, res) =
 // Delete project endpoint
 // force=true to allow removal even when sessions exist
 // deleteData=true to also delete session/memory files on disk (destructive)
-app.delete('/api/projects/:projectName', authenticateToken, async (req, res) => {
+app.delete(bp('/api/projects/:projectName'), authenticateToken, async (req, res) => {
     try {
         const { projectName } = req.params;
         const force = req.query.force === 'true';
@@ -507,7 +512,7 @@ app.delete('/api/projects/:projectName', authenticateToken, async (req, res) => 
 });
 
 // Search conversations content (SSE streaming)
-app.get('/api/search/conversations', authenticateToken, async (req, res) => {
+app.get(bp('/api/search/conversations'), authenticateToken, async (req, res) => {
     const query = typeof req.query.q === 'string' ? req.query.q.trim() : '';
     const parsedLimit = Number.parseInt(String(req.query.limit), 10);
     const limit = Number.isNaN(parsedLimit) ? 50 : Math.max(1, Math.min(parsedLimit, 100));
@@ -563,7 +568,7 @@ const expandWorkspacePath = (inputPath) => {
 };
 
 // Browse filesystem endpoint for project suggestions - uses existing getFileTree
-app.get('/api/browse-filesystem', authenticateToken, async (req, res) => {
+app.get(bp('/api/browse-filesystem'), authenticateToken, async (req, res) => {
     try {
         const { path: dirPath } = req.query;
 
@@ -643,7 +648,7 @@ app.get('/api/browse-filesystem', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/api/create-folder', authenticateToken, async (req, res) => {
+app.post(bp('/api/create-folder'), authenticateToken, async (req, res) => {
     try {
         const { path: folderPath } = req.body;
         if (!folderPath) {
@@ -684,7 +689,7 @@ app.post('/api/create-folder', authenticateToken, async (req, res) => {
 });
 
 // Read file content endpoint
-app.get('/api/projects/:projectName/file', authenticateToken, async (req, res) => {
+app.get(bp('/api/projects/:projectName/file'), authenticateToken, async (req, res) => {
     try {
         const { projectName } = req.params;
         const { filePath } = req.query;
@@ -724,7 +729,7 @@ app.get('/api/projects/:projectName/file', authenticateToken, async (req, res) =
 });
 
 // Serve raw file bytes for previews and downloads.
-app.get('/api/projects/:projectName/files/content', authenticateToken, async (req, res) => {
+app.get(bp('/api/projects/:projectName/files/content'), authenticateToken, async (req, res) => {
     try {
         const { projectName } = req.params;
         const { path: filePath } = req.query;
@@ -781,7 +786,7 @@ app.get('/api/projects/:projectName/files/content', authenticateToken, async (re
 });
 
 // Save file content endpoint
-app.put('/api/projects/:projectName/file', authenticateToken, async (req, res) => {
+app.put(bp('/api/projects/:projectName/file'), authenticateToken, async (req, res) => {
     try {
         const { projectName } = req.params;
         const { filePath, content } = req.body;
@@ -830,7 +835,7 @@ app.put('/api/projects/:projectName/file', authenticateToken, async (req, res) =
     }
 });
 
-app.get('/api/projects/:projectName/files', authenticateToken, async (req, res) => {
+app.get(bp('/api/projects/:projectName/files'), authenticateToken, async (req, res) => {
     try {
 
         // Using fsPromises from import
@@ -908,7 +913,7 @@ function validateFilename(name) {
 }
 
 // POST /api/projects/:projectName/files/create - Create new file or directory
-app.post('/api/projects/:projectName/files/create', authenticateToken, async (req, res) => {
+app.post(bp('/api/projects/:projectName/files/create'), authenticateToken, async (req, res) => {
     try {
         const { projectName } = req.params;
         const { path: parentPath, type, name } = req.body;
@@ -985,7 +990,7 @@ app.post('/api/projects/:projectName/files/create', authenticateToken, async (re
 });
 
 // PUT /api/projects/:projectName/files/rename - Rename file or directory
-app.put('/api/projects/:projectName/files/rename', authenticateToken, async (req, res) => {
+app.put(bp('/api/projects/:projectName/files/rename'), authenticateToken, async (req, res) => {
     try {
         const { projectName } = req.params;
         const { oldPath, newName } = req.body;
@@ -1062,7 +1067,7 @@ app.put('/api/projects/:projectName/files/rename', authenticateToken, async (req
 });
 
 // DELETE /api/projects/:projectName/files - Delete file or directory
-app.delete('/api/projects/:projectName/files', authenticateToken, async (req, res) => {
+app.delete(bp('/api/projects/:projectName/files'), authenticateToken, async (req, res) => {
     try {
         const { projectName } = req.params;
         const { path: targetPath, type } = req.body;
@@ -1288,7 +1293,7 @@ const uploadFilesHandler = async (req, res) => {
     });
 };
 
-app.post('/api/projects/:projectName/files/upload', authenticateToken, uploadFilesHandler);
+app.post(bp('/api/projects/:projectName/files/upload'), authenticateToken, uploadFilesHandler);
 
 /**
  * Proxy an authenticated client WebSocket to a plugin's internal WS server.
@@ -1343,12 +1348,17 @@ wss.on('connection', (ws, request) => {
     const urlObj = new URL(url, 'http://localhost');
     const pathname = urlObj.pathname;
 
-    if (pathname === '/shell') {
+    // Strip base path for routing
+    const routePath = basePath && pathname.startsWith(basePath)
+        ? pathname.slice(basePath.length)
+        : pathname;
+
+    if (routePath === '/shell') {
         handleShellConnection(ws);
-    } else if (pathname === '/ws') {
+    } else if (routePath === '/ws') {
         handleChatConnection(ws, request);
-    } else if (pathname.startsWith('/plugin-ws/')) {
-        handlePluginWsProxy(ws, pathname);
+    } else if (routePath.startsWith('/plugin-ws/')) {
+        handlePluginWsProxy(ws, routePath);
     } else {
         console.log('[WARN] Unknown WebSocket path:', pathname);
         ws.close();
@@ -1896,7 +1906,7 @@ function handleShellConnection(ws) {
     });
 }
 // Image upload endpoint
-app.post('/api/projects/:projectName/upload-images', authenticateToken, async (req, res) => {
+app.post(bp('/api/projects/:projectName/upload-images'), authenticateToken, async (req, res) => {
     try {
         const multer = (await import('multer')).default;
         const path = (await import('path')).default;
@@ -1981,7 +1991,7 @@ app.post('/api/projects/:projectName/upload-images', authenticateToken, async (r
 });
 
 // Get token usage for a specific session
-app.get('/api/projects/:projectName/sessions/:sessionId/token-usage', authenticateToken, async (req, res) => {
+app.get(bp('/api/projects/:projectName/sessions/:sessionId/token-usage'), authenticateToken, async (req, res) => {
     try {
         const { projectName, sessionId } = req.params;
         const { provider = 'claude' } = req.query;
@@ -2169,7 +2179,19 @@ app.get('/api/projects/:projectName/sessions/:sessionId/token-usage', authentica
 });
 
 // Serve React app for all other routes (excluding static files)
-app.get('*', (req, res) => {
+if (basePath) {
+    app.get(basePath, (req, res) => {
+        const indexPath = path.join(APP_ROOT, 'dist', 'index.html');
+        if (fs.existsSync(indexPath)) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.sendFile(indexPath);
+        } else {
+            const redirectHost = getConnectableHost(req.hostname);
+            res.redirect(`${req.protocol}://${redirectHost}:${VITE_PORT}${basePath}/`);
+        }
+    });
+}
+app.get(basePath ? `${basePath}/*` : '*', (req, res) => {
     // Skip requests for static assets (files with extensions)
     if (path.extname(req.path)) {
         return res.status(404).send('Not found');
@@ -2189,7 +2211,7 @@ app.get('*', (req, res) => {
     } else {
         // In development, redirect to Vite dev server only if dist doesn't exist
         const redirectHost = getConnectableHost(req.hostname);
-        res.redirect(`${req.protocol}://${redirectHost}:${VITE_PORT}`);
+        res.redirect(`${req.protocol}://${redirectHost}:${VITE_PORT}${basePath}/`);
     }
 });
 
@@ -2324,11 +2346,11 @@ async function startServer() {
         console.log('');
 
         if (isProduction) {
-            console.log(`${c.info('[INFO]')} To run in production mode, go to http://${DISPLAY_HOST}:${SERVER_PORT}`);            
+            console.log(`${c.info('[INFO]')} To run in production mode, go to http://${DISPLAY_HOST}:${SERVER_PORT}${basePath}`);
         }
 
-        console.log(`${c.info('[INFO]')} To run in development mode with hot-module replacement, go to http://${DISPLAY_HOST}:${VITE_PORT}`);
-   
+        console.log(`${c.info('[INFO]')} To run in development mode with hot-module replacement, go to http://${DISPLAY_HOST}:${VITE_PORT}${basePath}`);
+
         server.listen(SERVER_PORT, HOST, async () => {
             const appInstallPath = APP_ROOT;
 
@@ -2337,7 +2359,7 @@ async function startServer() {
             console.log(`  ${c.bright('CloudCLI Server - Ready')}`);
             console.log(c.dim('═'.repeat(63)));
             console.log('');
-            console.log(`${c.info('[INFO]')} Server URL:  ${c.bright('http://' + DISPLAY_HOST + ':' + SERVER_PORT)}`);
+            console.log(`${c.info('[INFO]')} Server URL:  ${c.bright('http://' + DISPLAY_HOST + ':' + SERVER_PORT + basePath)}`);
             console.log(`${c.info('[INFO]')} Installed at: ${c.dim(appInstallPath)}`);
             console.log(`${c.tip('[TIP]')}  Run "cloudcli status" for full configuration details`);
             console.log('');
