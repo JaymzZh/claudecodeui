@@ -10,7 +10,7 @@ const CursorLogo = ({ className = 'w-5 h-5' }: CursorLogoProps) => {
 
   return (
     <img
-      src={isDarkMode ? "/icons/cursor-white.svg" : "/icons/cursor.svg"}
+      src={isDarkMode ? `${import.meta.env.BASE_URL}icons/cursor-white.svg` : `${import.meta.env.BASE_URL}icons/cursor.svg`}
       alt="Cursor"
       className={className}
     />
